@@ -92,7 +92,7 @@ class Graph:
             self.vert_dict[node2].remove_neighbor(self.vert_dict[node1])
     
     def nodes(self):
-        return self.vert_dict.keys()
+        return list(self.vert_dict)
     
     def edges(self):
         edge_list=[]
@@ -115,10 +115,10 @@ class Graph:
                 wid = w.get_id()
                 if(((vid,wid) not in edge_list) and ((wid,vid) not in edge_list)):
                     if(wid<=vid):
-                        print '( %s , %s, %3d)'  % ( wid, vid, v.get_edge_length(w))
+                        print('( %s , %s, %3d)'  % ( wid, vid, v.get_edge_length(w)))
                         edge_list.append((wid,vid))
                     else:
-                        print '( %s , %s, %3d)'  % ( vid, wid, v.get_edge_length(w))
+                        print('( %s , %s, %3d)'  % ( vid, wid, v.get_edge_length(w)))
                         edge_list.append((vid,wid))
 
     def has_node(self, node):
@@ -166,8 +166,8 @@ class Graph:
         visited_nodes=[n[0],n[1]]
         l=1
         k=2
-        while(len(n)!=len(visited_nodes)):
-            if(self.has_edge(visited_nodes[-1],n[k]) is True):
+        while len(n)!=len(visited_nodes):
+            if self.has_edge(visited_nodes[-1],n[k]) is True:
                 dfs_edges.append((visited_nodes[-1],n[k]))
                 visited_nodes.append(n[k])
                 k=k+1
@@ -184,8 +184,8 @@ class Graph:
     def rand_tree(self,nodes):
         self.vert_dict = {}
         self.num_vertices = 0
-        forks=(nodes-2)/2
-        leafs=forks+2
+        forks=int((nodes-2)/2)
+        leafs=int(forks+2)
         if((nodes<4) or (forks%1!=0)):
             raise ValueError("It is not possible to create a bifurcating tree, because the wrong number of nodes is passed!")
         t1=1
@@ -275,7 +275,7 @@ def set_states(letters):
     '''
     Set the states of the markov chain
 
-    letters: A list of letters representing the differnet states    
+    letters: A list of letters representing the different states
     '''    
     if(type(letters) is not list):
         raise ValueError (" The input data letters is not a list!")
@@ -312,7 +312,7 @@ def find_parent(T, root, node):
     
     T:      graph
     root:   node designated to be the root 
-    node:   node in Graph T
+    node:   node in graph T
     '''
     preorder_nodes=T.dfs_nodes(root,[])  
     neighbors=T.neighbors(node)    
@@ -345,8 +345,8 @@ def find_children(G, root, node):
         return neighbors
     
 def pruning(G,leafs):
-    sorted_nodes=sorted(list(G.nodes()), key=int) 
-    nodes=sorted_nodes[leafs:]
+    sorted_nodes = sorted(list(G.nodes()), key=int)
+    nodes=sorted_nodes[int(leafs):]
     for node in nodes:
         if (G.degree(node)==1):
             G.remove_node(node)
@@ -370,7 +370,7 @@ def indroduce_new_node(G,node,new_root,pruned_node, eps):
     parent=find_parent(G, new_root, node)
     edge_length=G.get_time(node,parent)  
     G.remove_edge(node,parent)
-    # indroduce new node 
+    # introduced new node
     new_node=pruned_node
     # add edges to new node 
     G.add_edge(new_node, node, eps)
@@ -385,14 +385,14 @@ def indroduce_new_node(G,node,new_root,pruned_node, eps):
 def create_bifurcating_tree(eps,G,root):
     '''
     Input:
-    eps:    edge length to new indroduced node 
+    eps:    edge length to new introduced node
     G:      graph
     root:   a node designated to be the root
     
     Output:
     bifurcating tree
     '''
-    leafs=(len(G.nodes())/2)+1
+    leafs=int((len(G.nodes())/2)+1)
     if(leafs==4):
         forks=['5','6']
         forks.remove(root)
@@ -404,7 +404,6 @@ def create_bifurcating_tree(eps,G,root):
             break
         elif(pruned_node==root):
             list_of_nodes=sorted(list(G.nodes()), key=int)
-            #list_of_nodes.remove(root)
             count_nodes=0
             for node in list_of_nodes[leafs:]:
                 count_nodes=count_nodes+1
@@ -412,11 +411,11 @@ def create_bifurcating_tree(eps,G,root):
                     if(count_nodes==len(list_of_nodes[leafs:])):
                         new_root=node                    
                         G.add_edge(root, node, eps)
-                        # Add first leaf to new indroduced node
+                        # Add first leaf to the new introduced node
                         edge_length_1=G.get_time(node,list_of_nodes[0])      
                         G.remove_edge(node,list_of_nodes[0])
                         G.add_edge(root,list_of_nodes[0],edge_length_1)
-                        # Add second leaf to new indroduced node 
+                        # Add second leaf to the new introduced node
                         edge_length_1=G.get_time(node,list_of_nodes[0])    
                         G.remove_edge(node,list_of_nodes[1])
                         G.add_edge(root,list_of_nodes[1], edge_length_1)
@@ -435,11 +434,11 @@ def create_bifurcating_tree(eps,G,root):
                     if(count_nodes==len(list_of_nodes[leafs:])):
                         new_root=root                    
                         G.add_edge(root, pruned_node, eps)
-                        # Add first leaf to new indroduced node
+                        # Add first leaf to the new introduced node
                         edge_length_1=G.get_time(root,list_of_nodes[0])        
                         G.remove_edge(root,list_of_nodes[0])
                         G.add_edge(pruned_node,list_of_nodes[0], edge_length_1)
-                        # Add second leaf to new indroduced node 
+                        # Add second leaf to the new introduced node
                         edge_length_1=G.get_time(root,list_of_nodes[1])                    
                         G.remove_edge(root,list_of_nodes[1])
                         G.add_edge(pruned_node,list_of_nodes[1], edge_length_1)
@@ -460,9 +459,9 @@ def create_subset(seq,n,N,m):
     '''
     Function creates a subset of a given sequence data. 
        
-    seq:    dictionaray with sequences 
-    N:      number of sequnces 
-    m:      lengh of sequences 
+    seq:    dictionary with sequences
+    N:      number of ssequences
+    m:      length of sequences
     '''
     if(len(seq)<N):
         raise ValueError("Set of sequence data is to small")
@@ -475,7 +474,7 @@ def create_subset(seq,n,N,m):
         elif(int(specie)>N):
             return subset
         elif(len(seq[specie])<m):
-            print specie
+            print(specie)
             raise ValueError("Sequence of specie is to short!")
         else:
             subset[str(count)]=seq.get(specie)[:m]
@@ -601,12 +600,12 @@ def transition_probability(a,b,t):
     
     a:                  a state 
     b:                  a state
-    t:                  a positiv real number 
+    t:                  a positive real number
     '''
     if((a not in states) or (b not in states)):
         raise ValueError('Parameter %s or %s is not a state!' % (a,b))
     elif((t is None) or (t<1)):
-        print t
+        print(t)
         raise ValueError('Parameter type of variable t is not allowed!')
     elif(t==0):
         if(a==b):
@@ -617,9 +616,9 @@ def transition_probability(a,b,t):
         new_matrix=transition_matrix**(t)
         probability=new_matrix[states[a],states[b]]
         if(probability>1):
-            print t
-            print a
-            print b
+            print(t)
+            print(a)
+            print(b)
             raise ValueError
         return probability
     else:
@@ -635,7 +634,7 @@ def upward_message(i,j,m,seq, a, T):
     i:              a node of tree T
     j:              a node of tree T
     m:              the position in the sequence 
-    seq:            a dicitonary of sequences 
+    seq:            a dictionary of sequences
     a:              a nucleotide for which the upward-message is calculated 
     T:              a bifurcating Tree 
     '''
@@ -662,7 +661,7 @@ def upward_message(i,j,m,seq, a, T):
         else:
             raise ValueError('Tree is not bifurcating!')
 
-    # Create new sequence dicitonary  
+    # Create new sequence dictionary
     new_seq={}
     new_seq[j]=a
     for node in leaf_list:
@@ -747,7 +746,7 @@ def upward_message(i,j,m,seq, a, T):
                         result_matrix[k,visited_nodes]=transition_probability(y,x,t1)*result_matrix[l,visited_nodes-1]
                         k=k+1        
                 visited_nodes=visited_nodes+1
-            # The internal node has one neighbor which is an inernal node
+            # The internal node has one neighbor which is an internal node
             elif(fork_type=="type1"):
                 leafs=neighbor_leafs(node,new_tree)
                 forks=neighbor_forks(node,new_tree)
@@ -772,7 +771,7 @@ def Upward_message(i,j,m,seq, a, T):
     i:              a node of tree T
     j:              a node of tree T
     m:              the position in the sequence 
-    seq:            a dicitonary of sequences 
+    seq:            a dictionary of sequences
     a:   a sequence for which the upward-message is calculated 
     T:              a bifurcating Tree 
     '''
@@ -803,7 +802,7 @@ def marginal_probability(i,j,m,seq,T,priors):
     i:           a node of tree T
     j:           a node of tree T
     m:           the position in the sequence 
-    seq:         a dicitonary of sequences 
+    seq:         a dictionary of sequences
     T:           a bifurcating tree  
     priors:      a dictionary object with keys equal to the states 
     '''
@@ -814,13 +813,13 @@ def marginal_probability(i,j,m,seq,T,priors):
 
 def conditional_probability_1(i,j,m,a,seq,T,priors):
     '''
-    Calculates the conditonal probability P(X_i=a | x_1,...,x_N,T,t) 
+    Calculates the conditional probability P(X_i=a | x_1,...,x_N,T,t)
     
     i:          a node of tree T
     j:          a node of tree T
     m:          a position in the sequence 
     a:          an element of states
-    seq:        a dicitonary of sequences
+    seq:        a dictionary of sequences
     T:          a bifurcating Tree
     priors:     a dictionary object with keys equal to the states
     '''
@@ -842,14 +841,14 @@ def conditional_probability_1(i,j,m,a,seq,T,priors):
     
 def conditional_probability_2(i,j,m,a,b,seq,T,priors):
     '''
-    Calculates the conditonal probability P(X_i=a, X_j=b | x_1, ..., x_N,T,t) 
+    Calculates the conditional probability P(X_i=a, X_j=b | x_1, ..., x_N,T,t)
     
     i:          a node of tree T
     j:          a node of tree T
     m:          a position in the sequence 
     a:          an element of states
     b:          an element of states or None
-    seq:        a dicitonary of sequences
+    seq:        a dictionary of sequences
     T:          a bifurcating Tree
     priors:     a dictionary object with keys equal to the states
     '''
@@ -866,8 +865,8 @@ def conditional_probability_2(i,j,m,a,b,seq,T,priors):
 
 def approximated_expected_counts(root,seq,T,priors): 
     '''
-    1.  Create a dicitonary for all condional probabilities of one node  
-    2.  Create a dicitonary with expected_counts of all edges in T
+    1.  Create a dictionary for all conditional probabilities of one node
+    2.  Create a dictionary with expected_counts of all edges in T
     3.  Add the approximated expected counts for all other links to the dictionary 
     
     Returns a dictionary with keys (i, j, a, b) and the approximated expected counts as values.  
@@ -884,7 +883,7 @@ def approximated_expected_counts(root,seq,T,priors):
     expected_counts={} 
     M=len(seq[list(seq)[0]])
     
-    #t0=time.clock()
+    # t0=time.clock()
     # Create a dicitonary for the conditional probabilities 
     dic_conditional_probabilities={}
     for node in fork_list:
@@ -901,8 +900,8 @@ def approximated_expected_counts(root,seq,T,priors):
                     neighbor=T.neighbors(node)[0]
                     dic_conditional_probabilities[key]=conditional_probability_1(node,neighbor,m,x,seq,T,priors)
                     
-    #t1=time.clock()-t0
-    #print "Time Conditional Probabilities 1: %3.2f" % t1     
+    # t1=time.clock()-t0
+    # print "Time Conditional Probabilities 1: %3.2f" % t1
     # Compute expected counts for edges 
     for edge in edge_list:
         # For i is a leaf and j is a fork 
@@ -931,7 +930,7 @@ def approximated_expected_counts(root,seq,T,priors):
                         else:
                             expected_counts[key]=conditional_probability_2(edge[1],edge[0],m,x,y,seq,T,priors)
         else:
-            raise ValueError('Edge tupel %s has nodes sorted the wrong way around!' % edge)
+            raise ValueError('Edge tuple %s has nodes sorted the wrong way around!' % edge)
     #t2=time.clock()-t0-t1
     #print "Time Conditional Probabilities 2: %3.2f" % t2
     # Compute expected counts for link, which are no edges      
@@ -1002,28 +1001,30 @@ def L_local(expected_counts,i,j,priors,t):
                 tp=np.log(transition_probability(a,b,t))
                 pr=np.log(priors[b])
                 L=L+S_ij*(tp-pr)
-    if(type(L) is float or long):
+    if(type(L) is float):
         return L
     else:
-        print L
-        raise ValueError
+        return float(L)
+        #print(L)
+        #print(type(L))
+        #raise ValueError
 
 def optimize_link_length(eps,expected_counts,i,j,max_step,priors):
         '''
-        Optimization stops eighter after max_steps or if the absolute improvement of L_local(...) from t_k to t_k+1 is less than eps
+        Optimization stops either after max_steps or if the absolute improvement of L_local(...) from t_k to t_k+1 is less than eps
         
         Input:
-        eps:                the mimimum improvment from one step to the next 
+        eps:                the minimum improvement from one step to the next
         expected_counts:    dictionary with keys (i,j) and values weight_ij
         i:                  node
         j:                  node
         max_step:           maximum steps for optimization
-        priors:             dicitonary of prior probabilities
+        priors:             dictionary of prior probabilities
                 
         Output:
         optimized link length between node i and node j
         '''
-        #initial guess
+        # initial guess
         t_0=1
         t_1=2
         step_size=1
@@ -1076,12 +1077,12 @@ def optimize_link_length(eps,expected_counts,i,j,max_step,priors):
 
 def optimize_links(eps, expected_counts,priors,rho,max_steps,T):
     '''
-    Returns a dicitonary with keys (i,j) and values (t_optimized, weight_ij)
+    Returns a dictionary with keys (i,j) and values (t_optimized, weight_ij)
     
     Input:
-    eps                 absolute minimal improvment from on step to the other  
+    eps                 absolute minimal improvement from on step to the other
     expected_counts     dictionary with keys (i,j) and values weight_ij
-    priors              dicitonary of prior probabilities 
+    priors              dictionary of prior probabilities
     steps               maximum number of steps for each optimization 
     T                   bifurcating tree
     '''
@@ -1151,7 +1152,7 @@ def maximum_spanning_tree(optimized_links, number_nodes):
     Returns the maximum spanning tree
     
     Input: 
-    optimized_links  dicitonary wtih key (i, j) and value (t_optimized, weight_ij)
+    optimized_links  dictionary wtih key (i, j) and value (t_optimized, weight_ij)
     number_nodes     amount of nodes in the graph  
     '''
     max_tree=Graph() 
@@ -1175,15 +1176,15 @@ def maximum_spanning_tree(optimized_links, number_nodes):
 
 def structural_em(eps,priors,D,rho,max_steps,T):
     '''
-    A structural em alogrithm for phylogenetic inference 
-    
+    A structural em algorithm for phylogenetic inference
+
     Input:
     eps:            parameter for edge length optimization 
     priors:         dictionary of prior probabilities with keys of states
     D:              multiples sequence alignment in format of a dicitonary 
     rho:            annealing parameter
     max_steps:      maximum number of steps, which the em algorithm runs
-    T:              inital guess for a tree
+    T:              initial guess for a tree
         
     Output:
     bifurcating tree  
@@ -1197,7 +1198,7 @@ def structural_em(eps,priors,D,rho,max_steps,T):
     
     neighbors=neighbor_forks(root,T)
     likelihood_best=likelihood_incomplete_data(neighbors[0],root,priors, D, T)
-    print "Likelihood(100 digits): %.100f" % likelihood_best
+    print("Likelihood(100 digits): %.100f" % likelihood_best)
     
     while(steps<max_steps):
         
@@ -1206,7 +1207,7 @@ def structural_em(eps,priors,D,rho,max_steps,T):
         # E-Step
         counts=approximated_expected_counts(root,D,T,priors)
         t1=time.clock()-t0
-        print "Step %d: E-Step,    Time: %3.2f" % (steps,t1) 
+        print("Step %d: E-Step,    Time: %3.2f" % (steps,t1))
                 
         # M-Step I 
         max_steps_edge_length_opt=5
@@ -1214,7 +1215,7 @@ def structural_em(eps,priors,D,rho,max_steps,T):
         new_rho=rho*new_rho
         
         t2=time.clock()-t1-t0
-        print "Step %d: M-Step I,  Time: %3.2f" % (steps,t2)
+        print("Step %d: M-Step I,  Time: %3.2f" % (steps,t2))
         
         # M-Step II a)
         T1=maximum_spanning_tree(links,number_of_nodes)
@@ -1222,13 +1223,13 @@ def structural_em(eps,priors,D,rho,max_steps,T):
         # M-Step II b) 
         create_bifurcating_tree(1,T1,root)
         t3=time.clock()-t2-t1-t0
-        print "Step %d: M-Step II, Time: %3.2f" % (steps,t3)
+        print("Step %d: M-Step II, Time: %3.2f" % (steps,t3))
         
         #Likelihood 
         neighbors=neighbor_forks(root,T1)
         likelihood=likelihood_incomplete_data(neighbors[0],root,priors, D, T1)
         if(likelihood>likelihood_best):
-            print "Likelihood(100 digits): %.100f" % likelihood
+            print("Likelihood(100 digits): %.100f" % likelihood)
             best_tree=copy.deepcopy(T1)
             likelihood_best=likelihood
         #Update Tree
@@ -1268,10 +1269,10 @@ def simulate_multiples_alignment(T,M,priors):
     T:                      bifurcating tree
     M:                      length of the alignment
     priors:                 prior probability for each nucleotide
-    transition_matrix:      matrix with transition probabilties for the nucleotides
+    transition_matrix:      matrix with transition probabilities for the nucleotides
                 
     Output:
-    Dicitonary with a sequence of nuceleotides for each leaf of tree T  
+    Dictionary with a sequence of nucleotides for each leaf of tree T
     '''
     D={}
     N=len(T.nodes())
