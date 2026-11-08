@@ -627,142 +627,56 @@ def transition_probability(a,b,t):
         new_matrix=transition_matrix**(t_int)
         return new_matrix[states[a],states[b]] 
 
+def transition_matrix_power(t):
+    '''
+    Returns the matrix of transition probabilities over the time horizon t as numpy array.
+    Same restrictions on t as in transition_probability(a,b,t).
+
+    t:                  a positive real number
+    '''
+    if((t is None) or (t<1)):
+        raise ValueError('Parameter type of variable t is not allowed!')
+    return np.asarray(transition_matrix**int(t))
+
+def upward_vector(i,j,m,seq,T):
+    '''
+    Returns the upward messages u_i->j(a) for all states a as a vector indexed by states[a].
+    Computed recursively over the subtree of node i (Felsenstein's pruning algorithm).
+
+    i:              a node of tree T
+    j:              a neighbor of node i
+    m:              the position in the sequence
+    seq:            a dictionary of sequences
+    T:              a tree
+    '''
+    P=transition_matrix_power(T.get_time(i,j))
+    if(T.degree(i)==1):
+        # i is a leaf: p(a -> observed state of i)
+        return P[:,states[seq[i][m]]]
+    product=np.ones(len(states))
+    for k in T.neighbors(i):
+        if(k!=j):
+            product=product*upward_vector(k,i,m,seq,T)
+    # sum over all states x of node i: p(a -> x) * product(x)
+    return P.dot(product)
+
 def upward_message(i,j,m,seq, a, T):
     '''
-    Computes the upward message u_i->j.
-    
+    Computes the upward message u_i->j: the probability of the leaves in the subtree of node i
+    (the part of T on the side of i when the edge (i,j) is removed), given X_j = a.
+
     i:              a node of tree T
     j:              a node of tree T
-    m:              the position in the sequence 
+    m:              the position in the sequence
     seq:            a dictionary of sequences
-    a:              a nucleotide for which the upward-message is calculated 
-    T:              a bifurcating Tree 
+    a:              a nucleotide for which the upward-message is calculated
+    T:              a bifurcating Tree
     '''
     if(T.has_edge(i,j) is False):
          raise ValueError('Tree has no edge between node %s and node %s!' % (i,j))
     elif(len(a)!=1):
         raise ValueError("The input parameter a is not length one!" )
-    
-    # Create subtree with all nodes evolved from node i 
-    new_tree=create_subtree(i,j,T)
-        
-    # Add new node j to subtree
-    new_tree.add_edge(i,j,T.get_time(i,j)) 
-
-    # Create list of leafs and internal nodes. By following the tree from node j in breadth first search order
-    leaf_list=[]
-    fork_list=[]
-    bfs_nodes=new_tree.bfs_nodes(j)   
-    for node in bfs_nodes:
-        if(new_tree.degree(node)==3):
-            fork_list.append(node)
-        elif(new_tree.degree(node)==1):
-            leaf_list.append(node)
-        else:
-            raise ValueError('Tree is not bifurcating!')
-
-    # Create new sequence dictionary
-    new_seq={}
-    new_seq[j]=a
-    for node in leaf_list:
-        if(node==j):
-            continue 
-        else:
-            new_seq[node]=seq.get(node)
-                              
-    if(len(fork_list)==0):
-        return transition_probability(new_seq[i][m],new_seq[j],new_tree.get_time(i,j)) 
-    else:
-        # Count number of internal nodes
-        internal_nodes=len(fork_list)
-    
-        # Create matrix to store results
-        result_matrix=dynamic_programming_matrix(internal_nodes)
-        
-        # Visiting the first internal node
-        visited_nodes=0
-        node=fork_list[0]
-        k=0
-        # The first visited internal node is type1
-        if(node_type(node, new_tree)=="type1"): 
-            t1=new_tree.get_time(leaf_list[0],node) 
-            n1=new_seq[leaf_list[0]]
-            t2=new_tree.get_time(leaf_list[1],node) 
-            n2=new_seq[leaf_list[1]][m]                            
-            for x in states:
-                result_matrix[k,visited_nodes]=transition_probability(n1,x,t1)*transition_probability(x ,n2,t2) 
-                k=k+1  
-            visited_nodes=1
-        # The first visited internal node is type2
-        elif(node_type(node, new_tree)=="type2"):
-            leafs=neighbor_leafs(node,new_tree)
-            t1=new_tree.get_time(leafs[0],node) 
-            n1=new_seq[leafs[0]] 
-            for x in states:
-                result_matrix[k,visited_nodes]=transition_probability(n1,x,t1) 
-                k=k+1 
-            visited_nodes=1
-        # The first visited internal node is type0
-        elif(node_type(node, new_tree)=="type0"):
-             leafs=neighbor_leafs(node,new_tree)
-             leafs.remove(str(j))
-             t1=new_tree.get_time(str(j),node)
-             t2=new_tree.get_time(leafs[0],node) 
-             t3=new_tree.get_time(leafs[1],node) 
-             n1=new_seq[str(j)]  
-             n2=new_seq[leafs[0]][m]
-             n3=new_seq[leafs[1]][m]
-             for x in states:
-                 result_matrix[k,0]=transition_probability(n1,x,t1)*transition_probability(x ,n2,t2)*transition_probability(x ,n3,t3) 
-                 k=k+1
-             result=result_matrix[0:,0]
-             return float(np.sum(result))
-        # Visiting the other internal nodes 
-        for node in fork_list[1:]: 
-            fork_type=node_type(node, new_tree)
-            k=0
-            dim=len(states)**(visited_nodes)
-            
-            # The internal node has two neighbors which are internal nodes
-            if(fork_type=="type2"):
-                leafs=neighbor_leafs(node,new_tree)
-                forks=find_parent(new_tree, j, node) 
-                t1=new_tree.get_time(forks,node) 
-                t2=new_tree.get_time(leafs[0],node) 
-                n1=new_seq[leafs[0]][m]
-                for l in range(dim):
-                    y=sorted(states)[l%len(states)]
-                    for x in states:
-                        result_matrix[k,visited_nodes]=transition_probability(x,y,t1)*transition_probability(y,n1,t2)*result_matrix[l ,visited_nodes-1]
-                        k=k+1
-                visited_nodes=visited_nodes+1
-            # The internal node has three neighbors which are internal nodes
-            elif(fork_type=="type3"):
-                forks=find_parent(new_tree, j, node) 
-                t1=new_tree.get_time(forks,node)
-                for l in range(dim):
-                    y=sorted(states)[l%len(states)]
-                    for x in states:
-                        result_matrix[k,visited_nodes]=transition_probability(y,x,t1)*result_matrix[l,visited_nodes-1]
-                        k=k+1        
-                visited_nodes=visited_nodes+1
-            # The internal node has one neighbor which is an internal node
-            elif(fork_type=="type1"):
-                leafs=neighbor_leafs(node,new_tree)
-                forks=neighbor_forks(node,new_tree)
-                t1=new_tree.get_time(leafs[0],node) 
-                t2=new_tree.get_time(leafs[1],node) 
-                t3=new_tree.get_time(forks,node)
-                n1=new_seq[leafs[0]][m]
-                n2=new_seq[leafs[1]][m] 
-                for l in range(dim):
-                    y=sorted(states)[l%len(states)] 
-                    for x in states:
-                        result_matrix[k,visited_nodes]=transition_probability(n1,x,t1)*transition_probability(x ,n2,t2)*transition_probability(x ,y,t3)*result_matrix[l,visited_nodes-1]
-                        k=k+1   
-                visited_nodes=visited_nodes+1
-    result=result_matrix[0:,-1]
-    return float(np.sum(result))
+    return float(upward_vector(i,j,m,seq,T)[states[a]])
 
 def Upward_message(i,j,m,seq, a, T):
     '''
@@ -873,7 +787,7 @@ def approximated_expected_counts(root,seq,T,priors):
     '''
     fork_list=[]
     nodes=T.nodes()
-    nodes.sort()
+    nodes.sort(key=int)
     for node in nodes:
         if(T.degree(node)==3):
             fork_list.append(node)
@@ -921,7 +835,7 @@ def approximated_expected_counts(root,seq,T,priors):
             for m in range(M):
                 for y in states:
                     for x in states:
-                        if(edge[1]<edge[0]):
+                        if(int(edge[1])<int(edge[0])):
                             key=(edge[1],edge[0],x,y)
                         else:
                             key=(edge[0],edge[1],y,x)
@@ -962,7 +876,7 @@ def approximated_expected_counts(root,seq,T,priors):
                 for m in range(M):
                     n2=seq[nodes[index2]][m]
                     for x in states:
-                        key=(nodes[index1],nodes[index2],y,n2)
+                        key=(nodes[index1],nodes[index2],x,n2)
                         key_prop=(nodes[index1],m,x)
                         if(key in expected_counts):    
                             expected_counts[key]=expected_counts.get(key)+dic_conditional_probabilities.get(key_prop) 
@@ -1088,7 +1002,7 @@ def optimize_links(eps, expected_counts,priors,rho,max_steps,T):
     '''
     link_lengths={}
     nodes=T.nodes()
-    nodes.sort()
+    nodes.sort(key=int)
     weights=[]
     for index1 in range(len(nodes)):
         for index2 in range(index1+1,len(nodes)):
