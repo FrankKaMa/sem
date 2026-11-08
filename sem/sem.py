@@ -65,7 +65,7 @@ class Graph:
         try: 
             return v1.get_edge_length(v2)
         except KeyError:
-            print("No edge between node %s and node %s!")% (node1,node2)
+            print("No edge between node %s and node %s!" % (node1,node2))
         
     def add_node(self, node):
         self.num_vertices = self.num_vertices + 1
@@ -416,7 +416,7 @@ def create_bifurcating_tree(eps,G,root):
                         G.remove_edge(node,list_of_nodes[0])
                         G.add_edge(root,list_of_nodes[0],edge_length_1)
                         # Add second leaf to the new introduced node
-                        edge_length_1=G.get_time(node,list_of_nodes[0])    
+                        edge_length_1=G.get_time(node,list_of_nodes[1])
                         G.remove_edge(node,list_of_nodes[1])
                         G.add_edge(root,list_of_nodes[1], edge_length_1)
                         break
@@ -716,7 +716,7 @@ def upward_message(i,j,m,seq, a, T):
                  result_matrix[k,0]=transition_probability(n1,x,t1)*transition_probability(x ,n2,t2)*transition_probability(x ,n3,t3) 
                  k=k+1
              result=result_matrix[0:,0]
-             return sum(result)               
+             return float(np.sum(result))
         # Visiting the other internal nodes 
         for node in fork_list[1:]: 
             fork_type=node_type(node, new_tree)
@@ -752,7 +752,7 @@ def upward_message(i,j,m,seq, a, T):
                 forks=neighbor_forks(node,new_tree)
                 t1=new_tree.get_time(leafs[0],node) 
                 t2=new_tree.get_time(leafs[1],node) 
-                t3=new_tree.get_time(forks[0],node) 
+                t3=new_tree.get_time(forks,node)
                 n1=new_seq[leafs[0]][m]
                 n2=new_seq[leafs[1]][m] 
                 for l in range(dim):
@@ -762,7 +762,7 @@ def upward_message(i,j,m,seq, a, T):
                         k=k+1   
                 visited_nodes=visited_nodes+1
     result=result_matrix[0:,-1]
-    return sum(result)
+    return float(np.sum(result))
 
 def Upward_message(i,j,m,seq, a, T):
     '''
@@ -883,7 +883,7 @@ def approximated_expected_counts(root,seq,T,priors):
     expected_counts={} 
     M=len(seq[list(seq)[0]])
     
-    # t0=time.clock()
+    # t0=time.perf_counter()
     # Create a dicitonary for the conditional probabilities 
     dic_conditional_probabilities={}
     for node in fork_list:
@@ -900,8 +900,8 @@ def approximated_expected_counts(root,seq,T,priors):
                     neighbor=T.neighbors(node)[0]
                     dic_conditional_probabilities[key]=conditional_probability_1(node,neighbor,m,x,seq,T,priors)
                     
-    # t1=time.clock()-t0
-    # print "Time Conditional Probabilities 1: %3.2f" % t1
+    # t1=time.perf_counter()-t0
+    # print("Time Conditional Probabilities 1: %3.2f" % t1)
     # Compute expected counts for edges 
     for edge in edge_list:
         # For i is a leaf and j is a fork 
@@ -931,8 +931,8 @@ def approximated_expected_counts(root,seq,T,priors):
                             expected_counts[key]=conditional_probability_2(edge[1],edge[0],m,x,y,seq,T,priors)
         else:
             raise ValueError('Edge tuple %s has nodes sorted the wrong way around!' % edge)
-    #t2=time.clock()-t0-t1
-    #print "Time Conditional Probabilities 2: %3.2f" % t2
+    #t2=time.perf_counter()-t0-t1
+    #print("Time Conditional Probabilities 2: %3.2f" % t2)
     # Compute expected counts for link, which are no edges      
     for index1 in range(len(nodes)):
         for index2 in range(index1+1,len(nodes)):
@@ -945,7 +945,7 @@ def approximated_expected_counts(root,seq,T,priors):
                     n1=seq[nodes[index1]][m]
                     n2=seq[nodes[index2]][m]
                     key=(nodes[index1],nodes[index2],n1,n2)
-                    expected_counts[key]=1
+                    expected_counts[key]=expected_counts.get(key,0)+1
             # if i is a leaf and j is a fork
             elif(T.degree(nodes[index1])==1 and T.degree(nodes[index2])==3):
                 for m in range(M):
@@ -1039,8 +1039,8 @@ def optimize_link_length(eps,expected_counts,i,j,max_step,priors):
                 if(moving_up==1):
                     step_size=2*step_size
                 else:
-                    if(step_size/2>1):
-                        step_size=step_size/2
+                    if(step_size//2>1):
+                        step_size=step_size//2
                     else:
                         step_size=1
                 old_guess=new_guess
@@ -1052,8 +1052,8 @@ def optimize_link_length(eps,expected_counts,i,j,max_step,priors):
                 if(moving_up==0):
                     step_size=2*step_size
                 else:
-                    if(step_size/2>1):
-                        step_size=step_size/2
+                    if(step_size//2>1):
+                        step_size=step_size//2
                     else:
                         step_size=1
                 old_guess=new_guess
@@ -1196,17 +1196,17 @@ def structural_em(eps,priors,D,rho,max_steps,T):
     best_tree=None
     new_rho=rho
     
-    neighbors=neighbor_forks(root,T)
-    likelihood_best=likelihood_incomplete_data(neighbors[0],root,priors, D, T)
+    neighbor=neighbor_forks(root,T)
+    likelihood_best=likelihood_incomplete_data(neighbor,root,priors, D, T)
     print("Likelihood(100 digits): %.100f" % likelihood_best)
     
     while(steps<max_steps):
         
         steps=steps+1
-        t0=time.clock()
+        t0=time.perf_counter()
         # E-Step
         counts=approximated_expected_counts(root,D,T,priors)
-        t1=time.clock()-t0
+        t1=time.perf_counter()-t0
         print("Step %d: E-Step,    Time: %3.2f" % (steps,t1))
                 
         # M-Step I 
@@ -1214,7 +1214,7 @@ def structural_em(eps,priors,D,rho,max_steps,T):
         links=optimize_links(eps,counts,priors,new_rho,max_steps_edge_length_opt,T)
         new_rho=rho*new_rho
         
-        t2=time.clock()-t1-t0
+        t2=time.perf_counter()-t1-t0
         print("Step %d: M-Step I,  Time: %3.2f" % (steps,t2))
         
         # M-Step II a)
@@ -1222,12 +1222,12 @@ def structural_em(eps,priors,D,rho,max_steps,T):
         
         # M-Step II b) 
         create_bifurcating_tree(1,T1,root)
-        t3=time.clock()-t2-t1-t0
+        t3=time.perf_counter()-t2-t1-t0
         print("Step %d: M-Step II, Time: %3.2f" % (steps,t3))
         
         #Likelihood 
-        neighbors=neighbor_forks(root,T1)
-        likelihood=likelihood_incomplete_data(neighbors[0],root,priors, D, T1)
+        neighbor=neighbor_forks(root,T1)
+        likelihood=likelihood_incomplete_data(neighbor,root,priors, D, T1)
         if(likelihood>likelihood_best):
             print("Likelihood(100 digits): %.100f" % likelihood)
             best_tree=copy.deepcopy(T1)
@@ -1304,7 +1304,7 @@ def simulate_multiples_alignment(T,M,priors):
                 # adding random nucelotide to sequence 
                 neighbor=neighbor+nucleotides[discrete_rv(probabilities)]
                 D[str(edge[1])]=neighbor
-    current_species=(N/2)+1
+    current_species=(N//2)+1
     D_current_day=create_subset(D,1,current_species,M)
     return D_current_day    
   
