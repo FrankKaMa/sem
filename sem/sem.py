@@ -904,90 +904,73 @@ def L_local(expected_counts,i,j,priors,t):
     '''
     Returns the sum of S_ij(a,b)*[log(p_(a->b)(t))-log(p_b)] for all a and b in states. 
     '''
-    L=0
+    P=transition_matrix_power(t)
+    L=0.0
     for a in states:
         for b in states:
             key=(i,j,a,b)
             if(key in expected_counts):
                 S_ij=expected_counts.get(key)
-                if(t==0 and a!=b):
-                    raise ValueError("L_local can't be computed for an edge length of 0!")
-                tp=np.log(transition_probability(a,b,t))
+                tp=np.log(P[states[a],states[b]])
                 pr=np.log(priors[b])
                 L=L+S_ij*(tp-pr)
-    if(type(L) is float):
-        return L
-    else:
-        return float(L)
-        #print(L)
-        #print(type(L))
-        #raise ValueError
+    return float(L)
 
-def optimize_link_length(eps,expected_counts,i,j,max_step,priors):
+def optimize_link_length(eps,expected_counts,i,j,max_step,priors,t_max=2**20):
         '''
-        Optimization stops either after max_steps or if the absolute improvement of L_local(...) from t_k to t_k+1 is less than eps
+        Finds the integer link length t (1 <= t <= t_max) that maximizes L_local(...).
+
+        1. Doubling t = 1, 2, 4, ... until L_local(...) increases by no more than eps.
+           The maximum then lies between the last two points before that.
+        2. Binary search in this interval for the first t with L(t+1) <= L(t) + eps.
+
+        This finds the maximum exactly if L_local(...) has a single peak in t, with
+        about 2*log2(t) evaluations of L_local(...).
         
         Input:
         eps:                the minimum improvement from one step to the next
-        expected_counts:    dictionary with keys (i,j) and values weight_ij
+        expected_counts:    dictionary with keys (i,j,a,b) and the expected counts as values
         i:                  node
         j:                  node
-        max_step:           maximum steps for optimization
+        max_step:           maximum number of steps (doubling and binary search together)
         priors:             dictionary of prior probabilities
+        t_max:              upper bound for the link length
                 
         Output:
-        optimized link length between node i and node j
+        (optimized link length between node i and node j, L_local(...) at this length)
         '''
-        # initial guess
-        t_0=1
-        t_1=2
-        step_size=1
-        path=[1]
-        old_guess=L_local(expected_counts,i,j,priors,t_0)
-        new_guess=L_local(expected_counts,i,j,priors,t_1)
-        step=0
-        moving_up=1
-        while(abs(new_guess-old_guess)>eps):
-            path.append(t_1)
-            if(new_guess>old_guess):
-                if(moving_up==1):
-                    step_size=2*step_size
-                else:
-                    if(step_size//2>1):
-                        step_size=step_size//2
-                    else:
-                        step_size=1
-                old_guess=new_guess
-                t_0=t_1
-                t_1=t_1+step_size     
-                new_guess=L_local(expected_counts,i,j,priors,t_1)
-                moving_up=1
+        values={}
+        def value(t):
+            if(t not in values):
+                values[t]=L_local(expected_counts,i,j,priors,t)
+            return values[t]
+
+        # 1. Doubling: find an interval [lower, upper] containing the maximum
+        steps=0
+        lower=1
+        current=1
+        upper=1
+        while(steps<max_step):
+            upper=min(2*current,t_max)
+            if((upper==current) or (value(upper)<=value(current)+eps)):
+                break
+            lower=current
+            current=upper
+            steps=steps+1
+
+        # 2. Binary search for the first t in [lower, upper] with L(t+1) <= L(t) + eps
+        while((lower<upper) and (steps<max_step)):
+            middle=(lower+upper)//2
+            if(value(middle+1)>value(middle)+eps):
+                lower=middle+1
             else:
-                if(moving_up==0):
-                    step_size=2*step_size
-                else:
-                    if(step_size//2>1):
-                        step_size=step_size//2
-                    else:
-                        step_size=1
-                old_guess=new_guess
-                t_0=t_1
-                t_1=t_1-step_size 
-                new_guess=L_local(expected_counts,i,j,priors,t_1)
-                moving_up=0
-            step=step+1
-            #print (step,t_1,new_guess)
-            if(t_1 in path):
-                if(old_guess>new_guess):
-                    t_1=t_0
-                    new_guess=old_guess
-                break
-            elif(t_1==1):
-                new_guess=L_local(expected_counts,i,j,priors,t_1)
-                break
-            elif(step==max_step):
-                break
-        return (t_1,new_guess)
+                upper=middle
+            steps=steps+1
+        value(lower)
+
+        # Best evaluated link length (on ties the smallest t)
+        t_best=max(sorted(values), key=lambda t: values[t])
+        return (t_best,values[t_best])
 
 def optimize_links(eps, expected_counts,priors,rho,max_steps,T):
     '''
@@ -997,7 +980,7 @@ def optimize_links(eps, expected_counts,priors,rho,max_steps,T):
     eps                 absolute minimal improvement from on step to the other
     expected_counts     dictionary with keys (i,j) and values weight_ij
     priors              dictionary of prior probabilities
-    steps               maximum number of steps for each optimization 
+    max_steps           maximum number of steps for each link length optimization
     T                   bifurcating tree
     '''
     link_lengths={}
@@ -1124,7 +1107,7 @@ def structural_em(eps,priors,D,rho,max_steps,T):
         print("Step %d: E-Step,    Time: %3.2f" % (steps,t1))
                 
         # M-Step I 
-        max_steps_edge_length_opt=5
+        max_steps_edge_length_opt=64
         links=optimize_links(eps,counts,priors,new_rho,max_steps_edge_length_opt,T)
         new_rho=rho*new_rho
         
